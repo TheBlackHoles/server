@@ -9,6 +9,7 @@ namespace OCA\DAV\CalDAV;
 use DateTime;
 use DateTimeImmutable;
 use DateTimeInterface;
+use Generator;
 use OCA\DAV\AppInfo\Application;
 use OCA\DAV\CalDAV\Sharing\Backend;
 use OCA\DAV\Connector\Sabre\Principal;
@@ -34,6 +35,7 @@ use OCA\DAV\Events\SubscriptionCreatedEvent;
 use OCA\DAV\Events\SubscriptionDeletedEvent;
 use OCA\DAV\Events\SubscriptionUpdatedEvent;
 use OCP\AppFramework\Db\TTransactional;
+use OCP\Calendar\CalendarExportRange;
 use OCP\Calendar\Exceptions\CalendarException;
 use OCP\DB\Exception;
 use OCP\DB\QueryBuilder\IQueryBuilder;
@@ -948,6 +950,29 @@ class CalDavBackend extends AbstractBackend implements SyncSupport, Subscription
 				$shares
 			));
 		}, $this->db);
+	}
+
+
+	public function exportCalendar($calendarId, $calendarType = self::CALENDAR_TYPE_CALENDAR, ?CalendarExportRange $range = null): Generator {
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('*')
+			->from('calendarobjects')
+			->where($qb->expr()->eq('calendarid', $qb->createNamedParameter($calendarId)))
+			->andWhere($qb->expr()->eq('calendartype', $qb->createNamedParameter($calendarType)))
+			->andWhere($qb->expr()->isNull('deleted_at'));
+		if ($range?->start !== null) {
+			$qb->setFirstResult($range->start);
+		}
+		if ($range?->count !== null) {
+			$qb->setMaxResults($range->count);
+		}
+		$rs = $qb->executeQuery();
+
+		while (($row = $rs->fetch()) !== false) {
+			yield $row;
+		}
+
+		$rs->closeCursor();
 	}
 
 	/**
