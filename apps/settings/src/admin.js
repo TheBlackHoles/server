@@ -50,11 +50,9 @@ window.addEventListener('DOMContentLoaded', () => {
 			data: $('#mail_general_settings_form').serialize(),
 			success: () => {
 				OC.msg.finishedSuccess('#mail_settings_msg', t('settings', 'Saved'))
-			},
-			error: (xhr) => {
-				OC.msg.finishedError('#mail_settings_msg', xhr.responseJSON)
-			},
-		})
+			}).catch((error) => {
+				OC.msg.finishedError('#mail_settings_msg', error)
+			})
 	}
 
 	const toggleEmailCredentials = function() {
@@ -70,11 +68,9 @@ window.addEventListener('DOMContentLoaded', () => {
 			data: $('#mail_credentials_settings').serialize(),
 			success: () => {
 				OC.msg.finishedSuccess('#mail_settings_msg', t('settings', 'Saved'))
-			},
-			error: (xhr) => {
-				OC.msg.finishedError('#mail_settings_msg', xhr.responseJSON)
-			},
-		})
+			}).catch((error) => {
+				OC.msg.finishedError('#mail_settings_msg', error)
+			})
 	}
 
 	$('#mail_general_settings_form').change(changeEmailSettings)
@@ -95,11 +91,9 @@ window.addEventListener('DOMContentLoaded', () => {
 			type: 'POST',
 			success: () => {
 				OC.msg.finishedSuccess('#sendtestmail_msg', t('settings', 'Email sent'))
-			},
-			error: (xhr) => {
-				OC.msg.finishedError('#sendtestmail_msg', xhr.responseJSON)
-			},
-		})
+			}).catch((error) => {
+				OC.msg.finishedError('#sendtestmail_msg', error)
+			})
 	})
 
 	const setupChecks = () => {
