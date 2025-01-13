@@ -12,7 +12,11 @@ use OC\Files\Filesystem;
 use OC\Files\SetupManager;
 use OC\Files\SetupManagerFactory;
 use OCP\Cache\CappedMemoryCache;
+use OCP\EventDispatcher\IEventDispatcher;
 use OCP\Files\Config\ICachedMountInfo;
+use OCP\Files\Mount\Event\MountAddedEvent;
+use OCP\Files\Mount\Event\MountMovedEvent;
+use OCP\Files\Mount\Event\MountRemovedEvent;
 use OCP\Files\Mount\IMountManager;
 use OCP\Files\Mount\IMountPoint;
 use OCP\Files\NotFoundException;
@@ -26,43 +30,49 @@ class Manager implements IMountManager {
 	private CappedMemoryCache $inPathCache;
 	private SetupManager $setupManager;
 
-	public function __construct(SetupManagerFactory $setupManagerFactory) {
+	public function __construct(
+		SetupManagerFactory $setupManagerFactory,
+		private IEventDispatcher $eventDispatcher,
+	) {
 		$this->pathCache = new CappedMemoryCache();
 		$this->inPathCache = new CappedMemoryCache();
 		$this->setupManager = $setupManagerFactory->create($this);
 	}
 
-	/**
-	 * @param IMountPoint $mount
-	 */
-	public function addMount(IMountPoint $mount) {
+	public function addMount(IMountPoint $mount): void {
 		$this->mounts[$mount->getMountPoint()] = $mount;
 		$this->pathCache->clear();
 		$this->inPathCache->clear();
+
+		$this->eventDispatcher->dispatchTyped(new MountAddedEvent($mount));
 	}
 
-	/**
-	 * @param string $mountPoint
-	 */
-	public function removeMount(string $mountPoint) {
+	public function removeMount(string $mountPoint): void {
 		$mountPoint = Filesystem::normalizePath($mountPoint);
 		if (\strlen($mountPoint) > 1) {
 			$mountPoint .= '/';
 		}
-		unset($this->mounts[$mountPoint]);
-		$this->pathCache->clear();
-		$this->inPathCache->clear();
+
+		$mount = $this->mounts[$mountPoint] ?? null;
+		if ($mount !== null) {
+			unset($this->mounts[$mountPoint]);
+			$this->pathCache->clear();
+			$this->inPathCache->clear();
+
+			$this->eventDispatcher->dispatchTyped(new MountRemovedEvent($mount));
+		}
 	}
 
-	/**
-	 * @param string $mountPoint
-	 * @param string $target
-	 */
-	public function moveMount(string $mountPoint, string $target) {
-		$this->mounts[$target] = $this->mounts[$mountPoint];
-		unset($this->mounts[$mountPoint]);
-		$this->pathCache->clear();
-		$this->inPathCache->clear();
+	public function moveMount(string $mountPoint, string $target): void {
+		$mount = $this->mounts[$mountPoint] ?? null;
+		if ($mount !== null) {
+			$this->mounts[$target] = $mount;
+			unset($this->mounts[$mountPoint]);
+			$this->pathCache->clear();
+			$this->inPathCache->clear();
+
+			$this->eventDispatcher->dispatchTyped(new MountMovedEvent($mount, $mountPoint, $target));
+		}
 	}
 
 	/**
