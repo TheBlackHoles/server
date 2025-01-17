@@ -160,7 +160,15 @@ class APIController extends OCSController {
 	 */
 	public function getAppChangelogEntry(string $appId, ?string $version = null): DataResponse {
 		$version = $version ?? $this->appManager->getAppVersion($appId);
-		$changes = $this->manager->getChangelog($appId, $version);
+		// handle pre-release versions
+		$matches = [];
+		$result = preg_match('/^(\d+\.\d+(\.\d+)?)/', $version, $matches);
+		if ($result === false || $result === 0) {
+			return new DataResponse([], Http::STATUS_BAD_REQUEST);
+		}
+		$shortVersion = $matches[0];
+
+		$changes = $this->manager->getChangelog($appId, $shortVersion);
 
 		if ($changes === null) {
 			return new DataResponse([], Http::STATUS_NOT_FOUND);
