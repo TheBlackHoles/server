@@ -21,6 +21,7 @@ use OC\AppFramework\Utility\SimpleContainer;
 use OC\Core\Middleware\TwoFactorMiddleware;
 use OC\Diagnostics\EventLogger;
 use OC\Log\PsrLoggerAdapter;
+use OC\Security\Ip\BruteforceAllowList;
 use OC\ServerContainer;
 use OC\Settings\AuthorizedGroupMapper;
 use OC\User\Manager as UserManager;
@@ -280,7 +281,9 @@ class DIContainer extends SimpleContainer implements IAppContainer {
 					$c->get(IUserSession::class),
 					$c->get(IControllerMethodReflector::class),
 					$c->get(OC\Security\RateLimiting\Limiter::class),
-					$c->get(ISession::class)
+					$c->get(ISession::class),
+					$c->get(\OCP\IAppConfig::class),
+					$c->get(BruteforceAllowList::class),
 				)
 			);
 			$dispatcher->registerMiddleware(
